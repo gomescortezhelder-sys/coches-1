@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
   Image,
   Pressable,
@@ -7,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { supabase } from "../../lib/supabase";
 
 function OpcionMenu({
   icono,
@@ -37,6 +39,21 @@ function OpcionMenu({
 
 export default function Inicio() {
   const router = useRouter();
+  const [errorCerrarSesion, setErrorCerrarSesion] = useState("");
+
+  const cerrarSesion = async () => {
+    setErrorCerrarSesion("");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        setErrorCerrarSesion(error.message);
+      }
+    } catch (error) {
+      setErrorCerrarSesion(
+        error instanceof Error ? error.message : "No se pudo cerrar la sesión."
+      );
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -83,6 +100,12 @@ export default function Inicio() {
       </View>
 
       <Text style={styles.footer}>Apex Performance · Atelier Motors</Text>
+      {errorCerrarSesion ? (
+        <Text style={styles.errorCerrarSesion}>{errorCerrarSesion}</Text>
+      ) : null}
+      <Pressable style={styles.botonCerrar} onPress={cerrarSesion}>
+        <Text style={styles.textoCerrar}>Cerrar sesión</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -190,5 +213,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 24,
     marginBottom: 12,
+  },
+  botonCerrar: {
+    backgroundColor: "#8E3B46",
+    padding: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  textoCerrar: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+  },
+  errorCerrarSesion: {
+    color: "#fecaca",
+    textAlign: "center",
+    marginBottom: 8,
   },
 });

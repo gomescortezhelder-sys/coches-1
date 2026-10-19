@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
+import { supabase } from "../../lib/supabase";
 import {
     Pressable,
     ScrollView,
@@ -16,22 +17,52 @@ export default function Formulario() {
   const [correo, setCorreo] = useState("");
   const [telefono, setTelefono] = useState("");
   const [ciudad, setCiudad] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
 
-  const enviar = () => {
-    if (!nombre || !correo || !telefono || !ciudad) {
-      alert("Todos los campos son obligatorios");
+  const enviar = async () => {
+    setError("");
+    if (!nombre.trim() || !correo.trim() || !telefono.trim() || !ciudad.trim()) {
+      setError("Todos los campos son obligatorios.");
       return;
     }
 
-    router.push({
-      pathname: "/resultado",
-      params: {
-        nombre,
-        correo,
-        telefono,
-        ciudad,
-      },
-    });
+    try {
+      setGuardando(true);
+      const { error: errorReserva } = await supabase
+        .from("clientes_coches")
+        .insert({
+          nombre: nombre.trim(),
+          correo: correo.trim(),
+          telefono: telefono.trim(),
+          ciudad: ciudad.trim(),
+        });
+
+      if (errorReserva) {
+        setError(`No se pudo guardar la reserva: ${errorReserva.message}`);
+        return;
+      }
+
+      router.push({
+        pathname: "/resultado",
+        params: {
+          nombre: nombre.trim(),
+          correo: correo.trim(),
+          telefono: telefono.trim(),
+          ciudad: ciudad.trim(),
+        },
+      });
+    } catch (errorReserva) {
+      setError(
+        `No se pudo guardar la reserva: ${
+          errorReserva instanceof Error
+            ? errorReserva.message
+            : "Error inesperado de conexión."
+        }`
+      );
+    } finally {
+      setGuardando(false);
+    }
   };
 
   return (
@@ -77,8 +108,16 @@ export default function Formulario() {
           onChangeText={setCiudad}
         />
 
-        <Pressable style={styles.boton} onPress={enviar}>
-          <Text style={styles.botonTexto}>Reservar prueba</Text>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <Pressable
+          style={[styles.boton, guardando && styles.botonDeshabilitado]}
+          onPress={enviar}
+          disabled={guardando}
+        >
+          <Text style={styles.botonTexto}>
+            {guardando ? "Guardando reserva..." : "Reservar prueba"}
+          </Text>
         </Pressable>
       </View>
     </ScrollView>
@@ -132,8 +171,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 4,
   },
+  botonDeshabilitado: {
+    opacity: 0.7,
+  },
   botonTexto: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  error: {
+    color: "#fecaca",
+    marginBottom: 12,
+    lineHeight: 20,
   },
 });
